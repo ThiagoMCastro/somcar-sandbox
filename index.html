@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SomCar Sandbox – Simulador de Elétrica Automotiva</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header id="top">
+  <div class="brand">⚡ SomCar <span>Sandbox</span></div>
+  <div class="grp"><label>Cabo novo</label>
+    <select id="wGauge" title="Bitola do próximo cabo"></select>
+    <select id="wMat" title="Material"><option value="cu">OFC (cobre puro)</option><option value="cca">CCA (alumínio cobreado)</option></select>
+    <select id="wColor" title="Cor">
+      <option value="auto">Cor automática</option><option value="#e53935">Vermelho</option><option value="#2b2b2b">Preto</option>
+      <option value="#1e88e5">Azul</option><option value="#fdd835">Amarelo</option><option value="#fb8c00">Laranja</option>
+      <option value="#9aa0a6">Cinza</option><option value="#43a047">Verde</option><option value="#8e24aa">Roxo</option>
+    </select>
+  </div>
+  <div class="grp"><button id="btnMeter" title="Multímetro (M)">🔧 Multímetro</button></div>
+  <div class="grp"><label class="chk"><input type="checkbox" id="motor"> Motor ligado</label></div>
+  <div class="grp"><label>Sinal</label><select id="signal"></select></div>
+  <div class="grp"><label>Tempo</label>
+    <select id="speed"><option value="0">⏸ Pausa</option><option value="1" selected>1×</option><option value="5">5×</option><option value="20">20×</option></select>
+  </div>
+  <div class="grp"><button id="btnSound">🔇 Som desligado</button></div>
+  <div class="grp right">
+    <a href="jogo3d.html"><button>🎮 Versão 3D</button></a>
+    <button id="btnExample">Montagem exemplo</button>
+    <button id="btnClear">Limpar</button>
+    <button id="btnExport">Salvar</button>
+    <button id="btnImport">Abrir</button>
+    <input type="file" id="file" accept=".json" hidden>
+  </div>
+</header>
+<div id="main">
+  <aside id="palette">
+    <h4>Componentes</h4>
+    <div id="palList"></div>
+    <div class="help">
+      <b>Como jogar</b>
+      <p>Clique num componente da lista e depois no mapa para colocar.</p>
+      <p><b>Cabo:</b> clique num terminal, clique no vazio para fazer curvas e clique no terminal de destino. <kbd>Esc</kbd> ou botão direito cancela.</p>
+      <p>Arraste peças para mover. Arraste o fundo para navegar, rodinha = zoom.</p>
+      <p><kbd>Del</kbd> apaga o selecionado. Duplo clique liga/desliga chave e rádio.</p>
+      <p><b>Multímetro:</b> clique na ponta vermelha e depois na preta.</p>
+    </div>
+  </aside>
+  <div id="stage">
+    <canvas id="cv"></canvas>
+    <div id="hud"></div>
+    <div id="meter" hidden></div>
+    <div id="tip" hidden></div>
+    <div id="toast" hidden></div>
+  </div>
+  <aside id="panel">
+    <div id="pTitle">Nada selecionado</div>
+    <div id="pBody"><p class="muted">Selecione um componente ou cabo para ver propriedades e medições.</p></div>
+    <div id="pLive"></div>
+  </aside>
+</div>
+<div id="log"></div>
+<script src="sim.js"></script>
+<script src="audio.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

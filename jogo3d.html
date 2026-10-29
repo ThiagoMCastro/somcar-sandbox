@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SomCar 3D – Oficina de Som Automotivo</title>
+<link rel="stylesheet" href="jogo3d.css">
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<div id="game"></div>
+
+<div id="hud">
+  <div id="cross"></div>
+  <div id="aimHint"></div>
+  <div id="status"></div>
+  <div id="info" hidden></div>
+  <div id="meter" hidden></div>
+  <div id="hotbar"></div>
+  <div id="log"></div>
+  <div id="toast" hidden></div>
+</div>
+
+<div id="menu">
+  <div class="mwrap">
+    <h1>⚡ SomCar <span>3D · Oficina</span></h1>
+    <div class="cols">
+      <section>
+        <h2>Peças (clique para pegar)</h2>
+        <div id="inv"></div>
+      </section>
+      <section>
+        <h2>Cabo na mão</h2>
+        <label>Bitola <select id="wGauge"></select></label>
+        <label>Material <select id="wMat"><option value="cu">OFC (cobre puro)</option><option value="cca">CCA (alumínio cobreado)</option></select></label>
+        <label>Cor <select id="wColor">
+          <option value="auto">Automática</option><option value="#e53935">Vermelho</option><option value="#2b2b2b">Preto</option>
+          <option value="#1e88e5">Azul</option><option value="#fdd835">Amarelo</option><option value="#fb8c00">Laranja</option>
+          <option value="#9aa0a6">Cinza</option><option value="#43a047">Verde</option><option value="#8e24aa">Roxo</option></select></label>
+        <h2>Simulação</h2>
+        <label class="chk"><input type="checkbox" id="motor"> Motor ligado (alternador 14,4 V / 90 A)</label>
+        <label>Sinal <select id="signal"></select></label>
+        <label>Tempo <select id="speed"><option value="0">⏸ Pausa</option><option value="1" selected>1×</option><option value="5">5×</option><option value="20">20×</option></select></label>
+        <label class="chk"><input type="checkbox" id="sound"> Som real (alto-falantes do PC)</label>
+        <div class="btns">
+          <button id="btnExample">Montagem exemplo</button>
+          <button id="btnReset">Carro de fábrica</button>
+          <button id="btnExport">Salvar arquivo</button>
+          <button id="btnImport">Abrir arquivo</button>
+          <input type="file" id="file" accept=".json" hidden>
+          <a href="index.html"><button>Versão 2D</button></a>
+        </div>
+      </section>
+      <section class="help">
+        <h2>Controles</h2>
+        <p><kbd>W A S D</kbd> andar · <kbd>Shift</kbd> correr · <kbd>C</kbd> agachar · mouse olha</p>
+        <p><kbd>1</kbd> Mão · <kbd>2</kbd> Cabo · <kbd>3</kbd> Multímetro · <kbd>4</kbd> Peça · rodinha troca</p>
+        <p><b>Cabo:</b> mire num terminal e clique; clique em superfícies para prender o cabo pelo caminho; clique no terminal de destino. <kbd>Botão direito</kbd> desfaz o último ponto/cancela. <kbd>G</kbd> bitola · <kbd>T</kbd> material.</p>
+        <p><b>Mão:</b> clique numa peça para pegar e mover · <kbd>E</kbd> usar (chave, rádio, trocar fusível/peça queimada) · <b>rodinha</b> ajusta volume do rádio, ganho do amp, valor do fusível.</p>
+        <p><b>Peça:</b> mire numa superfície e clique para instalar · <kbd>R</kbd> girar.</p>
+        <p><kbd>X</kbd> remove o que está na mira · <kbd>Tab</kbd>/<kbd>Esc</kbd> este menu</p>
+        <p class="muted">O terra só funciona em metal do carro (assoalho, laterais, parede de fogo, motor). No chão da oficina ou bancada ele fica sem conexão!</p>
+      </section>
+    </div>
+    <button id="play">▶ JOGAR (clique)</button>
+  </div>
+</div>
+
+<script src="sim.js"></script>
+<script src="audio.js"></script>
+<script type="module" src="game3d.js"></script>
+</body>
+</html>

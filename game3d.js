@@ -438,19 +438,72 @@ function placeTarget() {
 function toast(msg) { const t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toast.h); toast.h = setTimeout(() => t.hidden = true, 3200); }
 function setTool(i) { tool = (i + TOOLS.length) % TOOLS.length; if (tool !== 1) wiring = null; if (tool !== 3 && carry?.isNew) carry = null; if (tool === 3 && !carry) carry = { isNew: true, item: invSel }; renderHotbar(); }
 
+const isTouch = matchMedia('(pointer: coarse)').matches || (navigator.maxTouchPoints > 0 && innerWidth < 1100) || location.search.includes('touch');
+let touchPlaying = false;
+function playing() { return controls.isLocked || touchPlaying; }
+function resume() {
+  if (isTouch) { touchPlaying = true; $('menu').classList.add('hidden'); document.body.classList.add('touchplay'); }
+  else controls.lock();
+}
+function pause() { touchPlaying = false; document.body.classList.remove('touchplay'); $('menu').classList.remove('hidden'); joy.x = joy.y = 0; }
 controls.addEventListener('lock', () => $('menu').classList.add('hidden'));
 controls.addEventListener('unlock', () => { $('menu').classList.remove('hidden'); for (const k in keys) keys[k] = false; });
-$('play').onclick = () => controls.lock();
+$('play').onclick = () => resume();
+
+/* ---------------- controles de toque ---------------- */
+const joy = { id: null, x: 0, y: 0, ox: 0, oy: 0 };
+const look = { id: null, x: 0, y: 0, sx: 0, sy: 0, t: 0, moved: false };
+const eul = new THREE.Euler(0, 0, 0, 'YXZ');
+if (isTouch) {
+  document.body.classList.add('touch');
+  renderer.setPixelRatio(Math.min(1.5, devicePixelRatio)); sun.shadow.mapSize.set(1024, 1024);
+  const pad = $('joy'), knob = $('knob');
+  pad.addEventListener('touchstart', e => { e.preventDefault(); const t = e.changedTouches[0], r = pad.getBoundingClientRect(); joy.id = t.identifier; joy.ox = r.left + r.width / 2; joy.oy = r.top + r.height / 2; moveJoy(t); }, { passive: false });
+  const moveJoy = t => {
+    let dx = t.clientX - joy.ox, dy = t.clientY - joy.oy; const L = Math.hypot(dx, dy), max = 50;
+    if (L > max) { dx *= max / L; dy *= max / L; }
+    joy.x = dx / max; joy.y = dy / max; knob.style.transform = `translate(${dx}px,${dy}px)`;
+  };
+  const game = renderer.domElement;
+  game.addEventListener('touchstart', e => {
+    e.preventDefault();
+    const t = e.changedTouches[0];
+    if (look.id === null) Object.assign(look, { id: t.identifier, x: t.clientX, y: t.clientY, sx: t.clientX, sy: t.clientY, t: performance.now(), moved: false });
+  }, { passive: false });
+  window.addEventListener('touchmove', e => {
+    for (const t of e.changedTouches) {
+      if (t.identifier === joy.id) moveJoy(t);
+      else if (t.identifier === look.id && touchPlaying) {
+        const dx = t.clientX - look.x, dy = t.clientY - look.y; look.x = t.clientX; look.y = t.clientY;
+        if (Math.hypot(t.clientX - look.sx, t.clientY - look.sy) > 10) look.moved = true;
+        eul.setFromQuaternion(camera.quaternion); eul.y -= dx * 0.006; eul.x = Math.max(-1.5, Math.min(1.5, eul.x - dy * 0.006));
+        camera.quaternion.setFromEuler(eul);
+      }
+    }
+  }, { passive: true });
+  window.addEventListener('touchend', e => {
+    for (const t of e.changedTouches) {
+      if (t.identifier === joy.id) { joy.id = null; joy.x = joy.y = 0; knob.style.transform = ''; }
+      if (t.identifier === look.id) { if (!look.moved && performance.now() - look.t < 300 && touchPlaying) leftClick(); look.id = null; }
+    }
+  });
+  const btn = (id, fn) => $(id).addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); fn(); }, { passive: false });
+  btn('tUse', () => leftClick()); btn('tBack', () => rightClick()); btn('tE', () => interact()); btn('tX', () => removeAimed());
+  btn('tR', () => { ghostRot += Math.PI / 2; }); btn('tC', () => { crouch = !crouch; }); btn('tMenu', () => pause());
+  btn('tPlus', () => { if (aim && (aim.kind === 'comp' || aim.kind === 'term')) adjust(aim.c, 1); });
+  btn('tMinus', () => { if (aim && (aim.kind === 'comp' || aim.kind === 'term')) adjust(aim.c, -1); });
+  $('hotbar').addEventListener('touchstart', e => { const d = e.target.closest('[data-tool]'); if (d) { e.preventDefault(); setTool(+d.dataset.tool); } }, { passive: false });
+}
 
 document.addEventListener('mousedown', e => {
-  if (!controls.isLocked) return;
+  if (!playing()) return;
   if (e.button === 2) { rightClick(); return; }
   if (e.button !== 0) return;
   leftClick();
 });
 document.addEventListener('contextmenu', e => e.preventDefault());
 document.addEventListener('wheel', e => {
-  if (!controls.isLocked) return;
+  if (!playing()) return;
   const dir = e.deltaY < 0 ? 1 : -1;
   if (tool === 0 && aim && aim.kind === 'comp' && adjust(aim.c, dir)) return;
   setTool(tool - dir);
@@ -534,8 +587,8 @@ function removeAimed() {
 }
 
 document.addEventListener('keydown', e => {
-  if (e.code === 'Tab') { e.preventDefault(); if (controls.isLocked) controls.unlock(); else controls.lock(); return; }
-  if (!controls.isLocked) return;
+  if (e.code === 'Tab') { e.preventDefault(); if (playing()) controls.unlock(); else resume(); return; }
+  if (!playing()) return;
   keys[e.code] = true;
   if (e.code.startsWith('Digit')) { const n = +e.code.slice(5); if (n >= 1 && n <= 4) setTool(n - 1); }
   if (e.code === 'KeyE') interact();
@@ -560,8 +613,8 @@ $('signal').onchange = e => world.signal = e.target.value;
 $('motor').onchange = e => { world.motor = e.target.checked; world.log(world.motor ? '🚗 Motor ligado – alternador 14,4 V' : '🚗 Motor desligado'); };
 $('speed').onchange = e => speed = +e.target.value;
 $('sound').onchange = e => e.target.checked ? audio.start() : audio.stop();
-$('btnExample').onclick = () => { buildExample(); controls.lock(); };
-$('btnReset').onclick = () => { if (confirm('Começar do zero (carro só com a bateria de fábrica)?')) { factoryCar(); controls.lock(); } };
+$('btnExample').onclick = () => { buildExample(); resume(); };
+$('btnReset').onclick = () => { if (confirm('Começar do zero (carro só com a bateria de fábrica)?')) { factoryCar(); resume(); } };
 $('btnExport').onclick = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([world.save()], { type: 'application/json' })); a.download = 'somcar3d.json'; a.click(); };
 $('btnImport').onclick = () => $('file').click();
 $('file').onchange = async e => { const f = e.target.files[0]; if (!f) return; try { world.load3(await f.text()); syncMenu(); sync(); } catch (err) { toast('Arquivo inválido (precisa ser da versão 3D)'); } e.target.value = ''; };
@@ -570,13 +623,13 @@ function renderInv() {
   $('inv').innerHTML = '';
   for (const it of INVENTORY) {
     const b = document.createElement('button'); b.textContent = it.label; b.classList.toggle('on', it === invSel);
-    b.onclick = () => { invSel = it; carry = { isNew: true, item: it }; ghostRot = 0; setTool(3); renderInv(); controls.lock(); };
+    b.onclick = () => { invSel = it; carry = { isNew: true, item: it }; ghostRot = 0; setTool(3); renderInv(); resume(); };
     $('inv').appendChild(b);
   }
 }
 function renderHotbar() {
   const sub = ['interagir / mover', `${String(wireDef.gauge).replace('.', ',')} mm² ${wireDef.mat === 'cca' ? 'CCA' : 'OFC'}`, 'medir tensão', invSel.label];
-  $('hotbar').innerHTML = TOOLS.map((t, i) => `<div class="${i === tool ? 'on' : ''}"><b>${i + 1}</b> ${t}<small>${sub[i]}</small></div>`).join('');
+  $('hotbar').innerHTML = TOOLS.map((t, i) => `<div data-tool="${i}" class="${i === tool ? 'on' : ''}"><b>${i + 1}</b> ${t}<small>${sub[i]}</small></div>`).join('');
   $('meter').hidden = tool !== 2;
 }
 
@@ -710,6 +763,10 @@ function infoHTML(a) {
 }
 
 function aimHint() {
+  if (isTouch) return aimHintRaw().replace(/\[Clique\]/g, '[Toque/USAR]').replace(/\[Direito\]/g, '[↶]');
+  return aimHintRaw();
+}
+function aimHintRaw() {
   if (carry) return `<b>[Clique]</b> instalar ${carry.isNew ? carry.item.label : compName(carry.c)} · <b>[R]</b> girar · <b>[Direito]</b> cancelar`;
   if (!aim) return wiring ? 'cabo na mão – mire numa superfície ou terminal' : '';
   if (tool === 1) {
@@ -763,13 +820,14 @@ function flushLog() {
 const tmpV = new THREE.Vector3();
 let last = performance.now(), hudT = 0, faceT = 0, saveT = 0, animT = 0, eye = 1.65;
 function frame(now) {
-  const dt = Math.min(0.05, (now - last) / 1000); last = now; animT += dt;
+  const dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); last = now; animT += dt;
 
   // movimento
-  if (controls.isLocked) {
+  if (playing()) {
     const sp = (keys.ShiftLeft ? 4 : 2) * (crouch ? 0.5 : 1) * dt;
     if (keys.KeyW) controls.moveForward(sp); if (keys.KeyS) controls.moveForward(-sp);
     if (keys.KeyD) controls.moveRight(sp); if (keys.KeyA) controls.moveRight(-sp);
+    if (joy.x || joy.y) { controls.moveForward(-joy.y * sp * 1.2); controls.moveRight(joy.x * sp * 1.2); }
     camera.position.x = Math.max(-11.5, Math.min(11.5, camera.position.x)); camera.position.z = Math.max(-11.5, Math.min(11.5, camera.position.z));
   }
   eye += ((crouch ? 0.95 : 1.65) - eye) * Math.min(1, dt * 10); camera.position.y = eye;
@@ -782,7 +840,7 @@ function frame(now) {
   audio.update(speed > 0 ? world.audio : { sub: 0, full: 0, tw: 0, clip: 0 }, world.signal);
 
   // mira
-  aim = controls.isLocked ? doRaycast() : null;
+  aim = playing() ? doRaycast() : null;
   if (carry) {
     const pt = placeTarget();
     if (pt) {
@@ -870,7 +928,7 @@ renderInv(); renderHotbar();
 try { const s = localStorage.getItem('somcar3d'); if (s) { world.load3(s); syncMenu(); sync(); world.log('💾 Montagem anterior restaurada'); } else factoryCar(); }
 catch (e) { factoryCar(); }
 if (location.search.includes('demo')) {
-  buildExample(); $('menu').classList.add('hidden');
+  buildExample(); if (isTouch) resume(); else $('menu').classList.add('hidden');
   const v = new URLSearchParams(location.search).get('cam');
   if (v) { const [x, y, z, tx, ty, tz] = v.split(',').map(Number); camera.position.set(x, y, z); eye = y; camera.lookAt(tx, ty, tz); }
   world.comps.find(c => c.type === 'headunit').props.volume = 30;

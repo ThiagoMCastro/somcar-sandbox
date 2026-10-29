@@ -1,6 +1,6 @@
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; overflow: hidden; background: #000; color: #e8ecf1; font: 13px/1.4 system-ui, 'Segoe UI', Roboto, sans-serif; }
-#game, #game canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+#game, #game canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
 #hud { position: fixed; inset: 0; pointer-events: none; }
 #cross { position: absolute; left: 50%; top: 50%; width: 18px; height: 18px; margin: -9px 0 0 -9px; }
 #cross::before, #cross::after { content: ''; position: absolute; background: rgba(255,255,255,.85); box-shadow: 0 0 2px #000; }
@@ -36,7 +36,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #000; color:
 #menu h1 { margin: 0 0 14px; color: #ffb300; font-size: 28px; } #menu h1 span { color: #e8ecf1; font-weight: 400; }
 #menu h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: #8b95a3; margin: 12px 0 8px; }
 .cols { display: grid; grid-template-columns: 1.1fr 1fr 1.2fr; gap: 20px; }
-@media (max-width: 900px) { .cols { grid-template-columns: 1fr; } }
+@media (max-width: 900px) { .cols { grid-template-columns: minmax(0, 1fr); } .mwrap { width: 100%; } #inv { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } #inv button { min-width: 0; overflow-wrap: anywhere; font-size: 12px; } #menu select { max-width: 100%; } }
 #inv { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 #inv button { text-align: left; padding: 8px; }
 #inv button.on { border-color: #ffb300; background: #3a2f10; }
@@ -49,3 +49,27 @@ button { cursor: pointer; } button:hover { border-color: #ffb300; }
 .help p { margin: 6px 0; color: #b8c1cc; }
 kbd { background: #222832; border: 1px solid #3a424e; border-radius: 3px; padding: 0 5px; font-size: 11px; color: #fff; }
 #play { display: block; margin: 18px auto 0; font-size: 18px; padding: 10px 40px; background: #ffb300; color: #111; font-weight: 800; border: none; }
+
+#touchUI { display: none; }
+.touchhelp { display: none; color: #ffcc80; }
+body.touch .touchhelp { display: block; }
+body.touchplay #touchUI { display: block; }
+#joy { position: fixed; left: max(16px, env(safe-area-inset-left)); bottom: 90px; width: 130px; height: 130px; border-radius: 50%; background: rgba(255,255,255,.08); border: 2px solid rgba(255,255,255,.25); touch-action: none; }
+#knob { position: absolute; left: 40px; top: 40px; width: 50px; height: 50px; border-radius: 50%; background: rgba(255,179,0,.55); pointer-events: none; }
+#tBtns { position: fixed; right: max(12px, env(safe-area-inset-right)); bottom: 90px; display: grid; grid-template-columns: repeat(3, 54px); gap: 8px; }
+#tBtns button, #tMenu { width: 54px; height: 54px; border-radius: 50%; background: rgba(20,24,30,.7); border: 2px solid rgba(255,255,255,.25); font-weight: 800; font-size: 15px; touch-action: none; }
+#tBtns .big { grid-column: span 3; width: auto; border-radius: 28px; background: rgba(255,179,0,.75); color: #111; font-size: 17px; }
+#tMenu { position: fixed; top: 10px; right: 10px; }
+body.touch #hud #hotbar { pointer-events: auto; }
+@media (max-width: 820px), (max-height: 500px) {
+  #info { width: 200px; font-size: 10.5px; padding: 6px; top: 70px; right: 8px; max-height: 45vh; overflow: hidden; }
+  #info h3 { font-size: 12px; }
+  #status { font-size: 11px; max-width: 70vw; }
+  #hotbar div { min-width: 64px; padding: 4px 6px; font-size: 11px; }
+  #hotbar small { display: none; }
+  #log { width: 60vw; bottom: 60px; } #log div { font-size: 10px; }
+  body.touchplay #log { bottom: 230px; }
+  #meter { width: 170px; bottom: auto; top: 70px; left: 8px; right: auto; padding: 6px; } #meter .lcd { font-size: 20px; }
+  #aimHint { font-size: 11px; white-space: normal; width: 80vw; }
+  .mwrap { padding: 12px; } #menu h1 { font-size: 20px; } #menu { align-items: flex-start; }
+}

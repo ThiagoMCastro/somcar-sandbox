@@ -215,6 +215,7 @@ class World {
 
   /* ------------------------------------------------------------------ */
   step(dt) {
+    if (!(dt > 0)) return;
     this.time += dt;
     const comps = this.comps, sig = SIGNALS[this.signal];
     const byId = new Map(comps.map(c => [c.id, c]));

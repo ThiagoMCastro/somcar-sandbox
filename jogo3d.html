@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>SomCar 3D – Oficina de Som Automotivo</title>
 <link rel="stylesheet" href="jogo3d.css">
 <script type="importmap">
@@ -24,6 +24,21 @@
   <div id="hotbar"></div>
   <div id="log"></div>
   <div id="toast" hidden></div>
+</div>
+
+<div id="touchUI">
+  <div id="joy"><div id="knob"></div></div>
+  <div id="tBtns">
+    <button id="tUse" class="big">USAR</button>
+    <button id="tBack">↶</button>
+    <button id="tE">E</button>
+    <button id="tX">✂ X</button>
+    <button id="tR">⟳ R</button>
+    <button id="tC">⇩ C</button>
+    <button id="tMinus">−</button>
+    <button id="tPlus">+</button>
+  </div>
+  <button id="tMenu">☰</button>
 </div>
 
 <div id="menu">
@@ -67,7 +82,8 @@
         <p class="muted">O terra só funciona em metal do carro (assoalho, laterais, parede de fogo, motor). No chão da oficina ou bancada ele fica sem conexão!</p>
       </section>
     </div>
-    <button id="play">▶ JOGAR (clique)</button>
+    <p class="touchhelp">📱 Celular: joystick à esquerda anda · arraste a tela para olhar · toque rápido ou <b>USAR</b> = clique · <b>↶</b> desfaz · <b>+/−</b> ajusta volume/ganho/fusível · toque nas ferramentas embaixo para trocar.</p>
+    <button id="play">▶ JOGAR</button>
   </div>
 </div>
 

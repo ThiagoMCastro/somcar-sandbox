@@ -6,7 +6,7 @@ const audio = new AudioEngine();
 const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
 const $ = id => document.getElementById(id);
 
-let cam = { x: -60, y: -60, z: 0.6 };
+let cam = { x: -60, y: -60, z: innerWidth < 820 ? 0.3 : 0.6 };
 let placing = null;          // {type, props}
 let sel = null;              // {c} | {w}
 let drag = null;             // {c,dx,dy} | {pan,sx,sy,cx,cy}
@@ -42,7 +42,7 @@ const toWorld = (sx, sy) => ({ x: sx / cam.z + cam.x, y: sy / cam.z + cam.y });
 function toast(msg) { const t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toast.h); toast.h = setTimeout(() => t.hidden = true, 3500); }
 
 function hitTerm(wx, wy) {
-  const r = Math.max(9, 7 / cam.z);
+  const r = touchMode ? Math.max(16, 14 / cam.z) : Math.max(9, 7 / cam.z);
   for (let i = world.comps.length - 1; i >= 0; i--) {
     const c = world.comps[i];
     for (const t of DEFS[c.type].terms) if (Math.hypot(c.x + t.x - wx, c.y + t.y - wy) < r) return { c: c.id, t: t.id };
@@ -62,7 +62,7 @@ function segDist(p, a, b) {
   return Math.hypot(p.x - a.x - t * dx, p.y - a.y - t * dy);
 }
 function hitWire(wx, wy) {
-  const tol = Math.max(5, 6 / cam.z);
+  const tol = touchMode ? Math.max(10, 12 / cam.z) : Math.max(5, 6 / cam.z);
   for (let i = world.wires.length - 1; i >= 0; i--) {
     const w = world.wires[i], p = world.wirePath(w);
     for (let k = 1; k < p.length; k++) if (segDist({ x: wx, y: wy }, p[k - 1], p[k]) < tol) return w;
@@ -114,12 +114,25 @@ for (const item of PALETTE) {
   };
   $('palList').appendChild(b);
 }
+$('cancelBtn').onclick = () => { if (wiring && wiring.pts.length) wiring.pts.pop(); else { wiring = null; clearPlacing(); } };
 function clearPlacing() { placing = null; document.querySelectorAll('.pal').forEach(x => x.classList.remove('on')); }
 
 /* ---------------- mouse ---------------- */
 cv.addEventListener('contextmenu', e => e.preventDefault());
-cv.addEventListener('mousedown', e => {
+const pointers = new Map();
+let pinch = null, touchMode = false;
+cv.addEventListener('pointerdown', e => {
+  touchMode = e.pointerType !== 'mouse';
   const r = cv.getBoundingClientRect(), sx = e.clientX - r.left, sy = e.clientY - r.top, w = toWorld(sx, sy);
+  mouse.sx = sx; mouse.sy = sy; mouse.wx = w.x; mouse.wy = w.y;
+  pointers.set(e.pointerId, { x: sx, y: sy });
+  if (pointers.size === 2) {
+    if (drag && drag.c) { drag.c.x = drag.ox; drag.c.y = drag.oy; }
+    drag = null; const [a, b] = [...pointers.values()];
+    pinch = { d: Math.hypot(a.x - b.x, a.y - b.y) || 1, wx: (a.x + b.x) / 2 / cam.z + cam.x, wy: (a.y + b.y) / 2 / cam.z + cam.y, z: cam.z };
+    return;
+  }
+  if (pointers.size > 2) return;
   if (e.button === 2) { if (wiring) { wiring = null; return; } if (placing) { clearPlacing(); return; } }
   if (e.button !== 0) { drag = { pan: true, sx, sy, cx: cam.x, cy: cam.y }; return; }
 
@@ -143,20 +156,29 @@ cv.addEventListener('mousedown', e => {
   }
   if (wiring) { wiring.pts.push({ x: snap(w.x), y: snap(w.y) }); return; }
   const c = hitComp(w.x, w.y);
-  if (c) { select({ c }); drag = { c, dx: w.x - c.x, dy: w.y - c.y }; world.comps.push(world.comps.splice(world.comps.indexOf(c), 1)[0]); return; }
+  if (c) { select({ c }); drag = { c, dx: w.x - c.x, dy: w.y - c.y, ox: c.x, oy: c.y }; world.comps.push(world.comps.splice(world.comps.indexOf(c), 1)[0]); return; }
   const wr = hitWire(w.x, w.y);
   if (wr) { select({ w: wr }); return; }
   select(null);
   drag = { pan: true, sx, sy, cx: cam.x, cy: cam.y };
 });
-window.addEventListener('mousemove', e => {
+window.addEventListener('pointermove', e => {
   const r = cv.getBoundingClientRect(); mouse.sx = e.clientX - r.left; mouse.sy = e.clientY - r.top;
+  if (pointers.has(e.pointerId)) pointers.set(e.pointerId, { x: mouse.sx, y: mouse.sy });
+  if (pinch && pointers.size >= 2) {
+    const [a, b] = [...pointers.values()], cx = (a.x + b.x) / 2, cy = (a.y + b.y) / 2;
+    cam.z = Math.max(0.2, Math.min(3, pinch.z * Math.hypot(a.x - b.x, a.y - b.y) / pinch.d));
+    cam.x = pinch.wx - cx / cam.z; cam.y = pinch.wy - cy / cam.z;
+    return;
+  }
   const w = toWorld(mouse.sx, mouse.sy); mouse.wx = w.x; mouse.wy = w.y;
   if (!drag) return;
   if (drag.pan) { cam.x = drag.cx - (mouse.sx - drag.sx) / cam.z; cam.y = drag.cy - (mouse.sy - drag.sy) / cam.z; }
   else if (drag.c) { drag.c.x = snap(w.x - drag.dx); drag.c.y = snap(w.y - drag.dy); }
 });
-window.addEventListener('mouseup', () => drag = null);
+const endPointer = e => { pointers.delete(e.pointerId); if (pointers.size < 2) pinch = null; drag = null; };
+window.addEventListener('pointerup', endPointer);
+window.addEventListener('pointercancel', endPointer);
 cv.addEventListener('wheel', e => {
   e.preventDefault();
   const before = toWorld(mouse.sx, mouse.sy);
@@ -182,7 +204,7 @@ function deleteSel() {
 }
 
 /* ---------------- painel ---------------- */
-function select(s) { sel = s; buildPanel(); }
+function select(s) { sel = s; document.body.classList.toggle('nosel', !s); buildPanel(); }
 function field(label, html) { return `<div class="f"><label>${label}</label>${html}</div>`; }
 function opts(list, cur) { return list.map(([v, t]) => `<option value="${v}"${String(v) === String(cur) ? ' selected' : ''}>${t}</option>`).join(''); }
 
@@ -623,7 +645,7 @@ function updateMeter() {
 }
 function updateTip() {
   const tip = $('tip');
-  if (drag) { tip.hidden = true; return; }
+  if (drag || (touchMode && !pointers.size && !wiring)) { tip.hidden = true; return; }
   let h = '';
   const t = hitTerm(mouse.wx, mouse.wy);
   if (t) {
@@ -667,7 +689,7 @@ function flushLog() {
 /* ---------------- loop ---------------- */
 let last = performance.now(), liveT = 0, saveT = 0;
 function frame(now) {
-  const rdt = Math.min(0.05, (now - last) / 1000); last = now;
+  const rdt = Math.max(0, Math.min(0.05, (now - last) / 1000)); last = now;
   animT += rdt;
   if (speed > 0) {
     const simDt = rdt * speed, n = Math.max(1, Math.ceil(simDt / 0.05));
@@ -708,6 +730,7 @@ function frame(now) {
   liveT += rdt; saveT += rdt;
   if (liveT > 0.15) { liveT = 0; updateLive(); updateHud(); updateMeter(); }
   updateTip(); flushLog();
+  $('cancelBtn').hidden = !(wiring || placing);
   if (saveT > 3) { saveT = 0; try { localStorage.setItem('somcar', world.serialize()); } catch (e) {} }
   requestAnimationFrame(frame);
 }
